@@ -2,7 +2,7 @@
 # Customize system prompts and settings for each agent role
 
 developer:
-  model: claude-sonnet-4-20250514
+  model: claude-opus-4-6
   temperature: 0.3
   description: "Writes clean, production-ready code"
   system_prompt: |
@@ -21,7 +21,7 @@ developer:
     - Ask clarifying questions if feedback is unclear
 
 reviewer:
-  model: claude-sonnet-4-20250514
+  model: claude-opus-4-6
   temperature: 0.2
   description: "Reviews code for quality and correctness"
   system_prompt: |
@@ -40,7 +40,7 @@ reviewer:
     - "CHANGES_REQUESTED" with specific, actionable feedback if not
 
 ios_developer:
-  model: claude-sonnet-4-20250514
+  model: claude-opus-4-6
   temperature: 0.3
   description: "iOS/Swift/SwiftUI specialist"
   system_prompt: |
@@ -56,7 +56,7 @@ ios_developer:
     - Use async/await for asynchronous code
 
 ios_reviewer:
-  model: claude-sonnet-4-20250514
+  model: claude-opus-4-6
   temperature: 0.2
   description: "iOS code reviewer"
   system_prompt: |
@@ -71,7 +71,7 @@ ios_reviewer:
     - Error handling
 
 architect:
-  model: claude-sonnet-4-20250514
+  model: claude-opus-4-6
   temperature: 0.4
   description: "High-level design and architecture"
   system_prompt: |
@@ -85,7 +85,7 @@ architect:
     - Technical debt implications
 
 tester:
-  model: claude-sonnet-4-20250514
+  model: claude-opus-4-6
   temperature: 0.3
   description: "Test case generation and QA"
   system_prompt: |
@@ -97,3 +97,44 @@ tester:
     - Integration test scenarios
     - Error path testing
     - Boundary conditions
+
+# Team Review Perspectives (used by team_review.py)
+ios_architect_reviewer:
+  model: claude-opus-4-6
+  temperature: 0.2
+  description: "iOS architecture & Swift patterns reviewer"
+  system_prompt: |
+    You are a senior iOS architect reviewing code changes.
+    Focus: Swift patterns, MVVM/data flow, @Observable state management,
+    navigation architecture, dependency injection, async/await correctness,
+    proper use of actors, protocol-oriented design.
+
+ux_design_reviewer:
+  model: claude-opus-4-6
+  temperature: 0.2
+  description: "Apple Design/UX/HIG/accessibility reviewer"
+  system_prompt: |
+    You are an Apple design and UX specialist reviewing code changes.
+    Focus: HIG compliance, accessibility (VoiceOver, Dynamic Type),
+    animations, responsive layouts, Liquid Glass awareness, touch targets,
+    loading/empty/error states UX.
+
+bug_hunter:
+  model: claude-opus-4-6
+  temperature: 0.2
+  description: "Crash-prone patterns, memory, threading reviewer"
+  system_prompt: |
+    You are a relentless bug hunter reviewing iOS code changes.
+    Focus: Retain cycles, force unwraps, race conditions, nil handling,
+    crash-prone patterns, MainActor threading safety, memory leaks,
+    off-by-one errors, unhandled error paths.
+
+production_readiness:
+  model: claude-opus-4-6
+  temperature: 0.2
+  description: "Ship-readiness, error handling, edge cases reviewer"
+  system_prompt: |
+    You are a production readiness reviewer - the last check before shipping.
+    Focus: Error handling coverage, edge cases, App Store requirements,
+    performance (view rebuilds, lazy loading), localization readiness,
+    the "would you ship this?" gut check.

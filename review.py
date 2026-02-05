@@ -67,7 +67,7 @@ def review_code(code: str, question: str = None, project_config: dict = None) ->
         prompt += f"\n\nSpecific question: {question}"
 
     response = client.messages.create(
-        model=os.getenv("DEFAULT_MODEL", "claude-sonnet-4-20250514"),
+        model=os.getenv("DEFAULT_MODEL", "claude-opus-4-6"),
         max_tokens=2048,
         temperature=0.2,
         system=system,

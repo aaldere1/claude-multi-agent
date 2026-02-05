@@ -136,6 +136,20 @@ def build_review_prompt(config: dict, base_prompt: str) -> str:
     return "\n".join(prompt_parts)
 
 
+def load_team_perspectives(repo_path: str) -> list[dict]:
+    """
+    Load team review perspectives from project config.
+
+    Reads the team_perspectives key from .claude-review.yaml if present.
+    Returns None if not configured (caller should use defaults).
+    """
+    config = load_project_config(repo_path)
+    custom = config.get("team_perspectives")
+    if custom and isinstance(custom, list):
+        return custom
+    return None
+
+
 def get_tool_path() -> str:
     """
     Get the path to the claude-review-agent tool installation.

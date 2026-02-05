@@ -8,6 +8,8 @@
 #   ./scripts/review.sh                           # Full PR-aware review
 #   ./scripts/review.sh "I fixed the memory leak" # With context
 #   ./scripts/review.sh --simple                  # Simple review (no PR context)
+#   ./scripts/review.sh --team                    # Multi-perspective team review
+#   ./scripts/review.sh --team "context"          # Team review with context
 
 # Find the tool installation
 if [ -n "$CLAUDE_REVIEW_HOME" ]; then
@@ -38,6 +40,10 @@ if [ "$1" == "--simple" ]; then
     shift
     echo "🔍 Running simple review (no PR context)..."
     python smart_review.py --repo "$REPO" --context "$1"
+elif [ "$1" == "--team" ]; then
+    shift
+    echo "👥 Running multi-perspective team review..."
+    python team_review.py --repo "$REPO" --context "$1"
 elif [ -n "$1" ]; then
     echo "🔍 Running PR-aware review with context..."
     python pr_review.py --repo "$REPO" --context "$1"

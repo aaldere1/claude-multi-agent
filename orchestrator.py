@@ -20,7 +20,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Configuration
-DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "claude-sonnet-4-20250514")
+DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "claude-opus-4-6")
 MAX_ITERATIONS = int(os.getenv("MAX_ITERATIONS", "5"))
 
 # Agent System Prompts

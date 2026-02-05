@@ -23,3 +23,13 @@ patterns:
 #   - "Thread safety and MainActor usage"
 #   - "Error handling completeness"
 #   - "API design and naming conventions"
+
+# Team review perspectives (optional - defaults to 4 iOS-focused reviewers)
+# Uncomment and customize to define your own team review perspectives
+# team_perspectives:
+#   - name: "Security"
+#     focus: "Authentication, authorization, Keychain usage, data privacy, network security"
+#   - name: "Performance"
+#     focus: "View rebuild efficiency, lazy loading, caching, memory profiling"
+#   - name: "Accessibility"
+#     focus: "VoiceOver, Dynamic Type, color contrast, motor accessibility"

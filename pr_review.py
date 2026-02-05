@@ -241,7 +241,7 @@ def review_with_pr_context(
     prompt = "\n".join(prompt_parts)
 
     response = client.messages.create(
-        model=os.getenv("DEFAULT_MODEL", "claude-sonnet-4-20250514"),
+        model=os.getenv("DEFAULT_MODEL", "claude-opus-4-6"),
         max_tokens=3000,
         temperature=0.2,
         system=system_prompt,

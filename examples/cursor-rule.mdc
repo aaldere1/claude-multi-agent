@@ -27,6 +27,14 @@ You have access to an external Claude reviewer agent. Use it as a collaborative 
 
 → Run: `./scripts/review.sh`
 
+**For team review (multi-perspective):**
+- "team review"
+- "multi-perspective review"
+- "review from different angles"
+- "check with the team"
+
+→ Run: `./scripts/review.sh --team "OPTIONAL_CONTEXT"`
+
 ## Two Ways To Use The Reviewer
 
 ### 1. Mid-Task: Validation & Questions

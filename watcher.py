@@ -91,7 +91,7 @@ This file enables communication between Cursor AI and the Reviewer Agent.
     def get_review(self, code_or_message: str) -> str:
         """Get reviewer feedback for the given content."""
         response = self.client.messages.create(
-            model=os.getenv("DEFAULT_MODEL", "claude-sonnet-4-20250514"),
+            model=os.getenv("DEFAULT_MODEL", "claude-opus-4-6"),
             max_tokens=2048,
             temperature=0.2,
             system=REVIEWER_PROMPT,

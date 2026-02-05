@@ -14,6 +14,9 @@ python pr_review.py --repo /path/to/project
 # Simple review (no PR context)
 python smart_review.py --repo /path/to/project
 
+# Multi-perspective team review (4 specialized reviewers)
+python team_review.py --repo /path/to/project
+
 # Review single file
 python review.py --file /path/to/file.swift
 ```
@@ -24,6 +27,7 @@ python review.py --file /path/to/file.swift
 |------|---------|
 | `pr_review.py` | PR-aware review with GitHub context |
 | `smart_review.py` | Git diff review without PR context |
+| `team_review.py` | Multi-perspective team review (4 parallel reviewers) |
 | `review.py` | Single file/clipboard review |
 | `config_loader.py` | Loads project-specific configuration |
 

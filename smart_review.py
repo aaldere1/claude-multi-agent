@@ -110,7 +110,7 @@ def review_diff(diff: str, context: str = None, files_changed: list[str] = None,
     prompt = "\n\n".join(prompt_parts)
 
     response = client.messages.create(
-        model=os.getenv("DEFAULT_MODEL", "claude-sonnet-4-20250514"),
+        model=os.getenv("DEFAULT_MODEL", "claude-opus-4-6"),
         max_tokens=2048,
         temperature=0.2,
         system=system_prompt,
