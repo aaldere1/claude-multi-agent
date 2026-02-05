@@ -11,11 +11,21 @@ You code in Cursor → Say "local review" → External Claude agent reviews your
                               • Checks if previous feedback was addressed
                               • Reviews your uncommitted changes
                               • Returns READY TO COMMIT or NEEDS WORK
+
+              or → Say "team review" → 4 specialized reviewers in parallel
+                                         ↓
+                              • iOS Architect (patterns, data flow, async)
+                              • Apple Design & UX (HIG, accessibility)
+                              • Bug Hunter (crashes, memory, threading)
+                              • Production Readiness (edge cases, shipping)
+                                         ↓
+                              • Synthesized priority-ranked report
 ```
 
 **Key Features:**
 - 🔍 **PR-Aware Reviews** - Knows your PR description, previous comments, CI status
-- 🤖 **Cursor Integration** - Just say "local review" or "ask the reviewer"
+- 👥 **Team Reviews** - 4 specialized reviewers analyze code in parallel, then synthesize
+- 🤖 **Cursor Integration** - Just say "local review", "ask the reviewer", or "team review"
 - ⚙️ **Project-Specific** - Learns your codebase patterns from a simple config file
 - 🔄 **Mid-Task Validation** - Ask questions while coding, not just at the end
 
@@ -78,6 +88,7 @@ cp ~/claude-review-agent/examples/claude-review.yaml .claude-review.yaml
 
 In Cursor chat, say:
 - `"local review"` - Full PR-aware review before committing
+- `"team review"` - Multi-perspective review (4 specialized reviewers)
 - `"ask the reviewer: is this approach correct?"` - Get guidance mid-task
 
 ---
@@ -118,12 +129,19 @@ The Cursor rule (`.cursor/rules/peer-review.mdc`) teaches Cursor how to use the 
 | `"check with the reviewer"` | Ask a question with your current changes |
 | `"ask the reviewer: ..."` | Ask a specific question |
 | `"validate with reviewer"` | Validate your approach |
+| `"team review"` | Multi-perspective team review (4 reviewers) |
+| `"multi-perspective review"` | Same as team review |
+| `"check with the team"` | Same as team review |
 
-**Example workflow:**
+**Example workflows:**
 
 > You: "Fix the memory leak in ProfileView. Check with the reviewer if you're unsure about the approach. Run local review before committing."
 >
 > Cursor: Makes changes, asks reviewer about weak self usage, gets confirmation, finishes all changes, runs full review, gets READY TO COMMIT, offers to commit.
+
+> You: "I just refactored the navigation stack. Run a team review before I commit."
+>
+> Cursor: Runs `./scripts/review.sh --team "Refactored navigation stack"`. Four specialized reviewers analyze the changes in parallel. Returns a synthesized report with priority-ranked issues from architecture, UX, bug, and shipping perspectives.
 
 ---
 
@@ -141,6 +159,12 @@ python pr_review.py --repo ~/your-project
 
 # PR-aware review with context
 python pr_review.py --repo ~/your-project --context "Fixed the retain cycle"
+
+# Multi-perspective team review (4 parallel reviewers)
+python team_review.py --repo ~/your-project
+
+# Team review with context
+python team_review.py --repo ~/your-project --context "Refactored navigation"
 
 # Simple review (no PR context, faster)
 python smart_review.py --repo ~/your-project
@@ -167,9 +191,35 @@ python review.py --clipboard
 4. Sends everything to Claude with your project config
 5. Returns verdict: **READY TO COMMIT** or **NEEDS WORK**
 
+### Team Review (`team_review.py`)
+
+Runs 4 specialized reviewers in parallel, each examining your changes from a different angle:
+
+| Reviewer | Focus |
+|----------|-------|
+| **iOS Architect** | Swift patterns, MVVM/data flow, @Observable, navigation, async/await, actors |
+| **Apple Design & UX** | HIG compliance, accessibility (VoiceOver, Dynamic Type), Liquid Glass, layouts |
+| **Bug Hunter** | Retain cycles, force unwraps, race conditions, MainActor, memory leaks |
+| **Production Readiness** | Error handling, edge cases, App Store requirements, performance, localization |
+
+After all 4 complete, a synthesis agent combines their findings into a single priority-ranked report with an **APPROVED** or **CHANGES_REQUESTED** verdict.
+
+**Customize perspectives** in `.claude-review.yaml`:
+```yaml
+team_perspectives:
+  - name: "Security"
+    focus: "Authentication, authorization, Keychain usage, data privacy"
+  - name: "Performance"
+    focus: "View rebuild efficiency, lazy loading, caching, memory profiling"
+  - name: "Accessibility"
+    focus: "VoiceOver, Dynamic Type, color contrast, motor accessibility"
+```
+
+If not specified, defaults to the 4 iOS-focused perspectives above.
+
 ### Simple Review (`smart_review.py`)
 
-Same as above but skips the GitHub PR context. Faster for quick checks.
+Same as PR-aware but skips the GitHub PR context. Faster for quick checks.
 
 ### File Review (`review.py`)
 
@@ -221,6 +271,7 @@ Reviews a single file or clipboard content. Good for reviewing code snippets.
 | File | Purpose |
 |------|---------|
 | `pr_review.py` | PR-aware review with GitHub context |
+| `team_review.py` | Multi-perspective team review (4 parallel reviewers) |
 | `smart_review.py` | Git diff review without PR context |
 | `review.py` | Single file/clipboard review |
 | `config_loader.py` | Loads project-specific configuration |
