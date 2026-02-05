@@ -1,0 +1,45 @@
+---
+description: LOCAL code review using external Claude reviewer agent - NOT GitHub
+alwaysApply: true
+globs:
+  - "**/*.swift"
+---
+
+# Local Peer Review (External Claude Agent)
+
+## CRITICAL: This is NOT GitHub review
+
+When user says: `/review`, `smart review`, `local review`, or `run review script`
+
+**DO NOT** post comments to GitHub or use `gh pr comment`.
+**DO NOT** request reviews from GitHub bots.
+
+**INSTEAD**, run this exact command in the terminal:
+
+```bash
+./scripts/review.sh
+```
+
+If user provides context (e.g., "/review I fixed the memory leak"):
+```bash
+./scripts/review.sh "I fixed the memory leak"
+```
+
+## What This Does
+
+This runs a LOCAL Python script that:
+1. Calls an external Claude API reviewer agent
+2. Analyzes your uncommitted git diff
+3. Fetches PR context from GitHub (description, comments, CI status)
+4. Returns **READY TO COMMIT** or **NEEDS WORK**
+
+## After Running
+
+- Show the full script output to the user
+- If **NEEDS WORK**: Offer to fix the identified issues
+- If **READY TO COMMIT**: Ask if user wants to commit
+
+## This is Different From GitHub Review
+
+- GitHub review = bots comment on your PR after you push
+- Local review = Claude agent reviews BEFORE you commit, while changes are still local

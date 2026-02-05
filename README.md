@@ -2,6 +2,33 @@
 
 Autonomous multi-agent system where Claude instances collaborate to develop, review, and refine code before any human intervention or commits.
 
+## Primary Use Case: Cursor IDE Integration
+
+The main workflow is **PR-aware code review** integrated with Cursor IDE:
+
+```
+You code in Cursor → Say "smart review" → External Claude agent reviews your changes
+                                         → Checks PR context from GitHub
+                                         → Verifies previous feedback addressed
+                                         → Returns READY TO COMMIT or NEEDS WORK
+```
+
+### Quick Start for Cursor
+
+1. Add the review script to your project (example: CineConcerts iOS app):
+   ```bash
+   cp scripts/review.sh /path/to/your/project/scripts/
+   chmod +x /path/to/your/project/scripts/review.sh
+   ```
+
+2. Add a Cursor rule (`.cursor/rules/peer-review.mdc`) - see `examples/cursor-rule.mdc`
+
+3. In Cursor chat, say: `smart review` or `local review`
+
+4. Cursor runs the external reviewer and shows you the verdict.
+
+---
+
 ## Concept
 
 Instead of a single AI assistant, this system uses multiple Claude "agents" with different roles that communicate with each other:
@@ -318,13 +345,105 @@ response = requests.post(
 feedback = response.json()["feedback"]
 ```
 
+## Review Tools
+
+### pr_review.py - PR-Aware Smart Review (Recommended)
+
+Reviews your uncommitted changes with full GitHub PR context:
+
+```bash
+# Activate venv first
+source venv/bin/activate
+
+# Review with PR context
+python pr_review.py --repo /path/to/repo
+
+# With context about what you did
+python pr_review.py --repo /path/to/repo --context "Fixed the memory leak"
+```
+
+**What it does:**
+1. Detects current branch
+2. Fetches PR description, review comments, CI status from GitHub
+3. Gets your uncommitted changes (git diff)
+4. Reviews changes against all that context
+5. Reports: READY TO COMMIT or NEEDS WORK
+
+### smart_review.py - Git Diff Review
+
+Reviews git diff without PR context (faster, simpler):
+
+```bash
+python smart_review.py --repo /path/to/repo
+python smart_review.py --repo /path/to/repo --context "Added error handling"
+python smart_review.py --repo /path/to/repo --files specific/file.swift
+```
+
+### review.py - Quick File/Clipboard Review
+
+Review a single file or clipboard content:
+
+```bash
+python review.py --file path/to/file.swift
+python review.py --clipboard
+python review.py --file path/to/file.swift --context cc  # CineConcerts context
+```
+
+## Cursor IDE Integration
+
+### Setting Up Your Project
+
+1. **Create the review script** in your project:
+
+   ```bash
+   # /your-project/scripts/review.sh
+   #!/bin/bash
+   cd ~/claude-multi-agent
+   source venv/bin/activate
+
+   REPO="/path/to/your/project"
+
+   if [ "$1" == "--simple" ]; then
+       shift
+       python smart_review.py --repo "$REPO" --context "$1"
+   elif [ -n "$1" ]; then
+       python pr_review.py --repo "$REPO" --context "$1"
+   else
+       python pr_review.py --repo "$REPO"
+   fi
+   ```
+
+2. **Create Cursor rule** at `.cursor/rules/peer-review.mdc`:
+
+   ```markdown
+   ---
+   description: LOCAL code review using external Claude reviewer agent
+   alwaysApply: true
+   ---
+
+   When user says: /review, smart review, local review
+
+   Run this command:
+   ./scripts/review.sh
+
+   Show the output and summarize the verdict.
+   ```
+
+3. **Use trigger words** in Cursor chat:
+   - `smart review`
+   - `local review`
+   - `/review`
+
 ## Roadmap
 
-- [ ] Basic orchestrator with developer + reviewer
-- [ ] Cursor command integration
-- [ ] iOS-specific agent personas
-- [ ] File-based context loading
-- [ ] API server mode
+- [x] Basic orchestrator with developer + reviewer
+- [x] Cursor command integration
+- [x] iOS-specific agent personas
+- [x] File-based context loading
+- [x] API server mode
+- [x] PR-aware review with GitHub integration
+- [x] Git diff-based review (smart_review.py)
+- [x] Quick file/clipboard review (review.py)
 - [ ] Droplet deployment scripts
 - [ ] Web UI for monitoring loops
 - [ ] Slack/Discord notifications

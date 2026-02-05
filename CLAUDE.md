@@ -9,13 +9,31 @@ This project enables multiple Claude "agents" (with different personas/roles) to
 - **Reviewer Agent**: Reviews code and provides feedback
 - **Orchestrator**: Manages the loop until code is approved
 
+## Primary Use Case: Cursor IDE + PR-Aware Review
+
+The main workflow integrates with Cursor IDE for iOS development:
+
+1. Code in Cursor (make changes, don't commit)
+2. Say `smart review` or `local review` in Cursor chat
+3. External Claude reviewer checks your changes against PR context
+4. Get verdict: READY TO COMMIT or NEEDS WORK
+
 ## Quick Start
 
 ```bash
 # Activate environment
 source venv/bin/activate
 
-# Run a task
+# PR-aware review (recommended)
+python pr_review.py --repo /path/to/project
+
+# Simple git diff review
+python smart_review.py --repo /path/to/project
+
+# Quick file review
+python review.py --file path/to/file.swift
+
+# Run developer/reviewer loop
 python orchestrator.py --task "Your task here" --context-type ios
 
 # Start API server
@@ -26,10 +44,20 @@ python server.py
 
 | File | Purpose |
 |------|---------|
-| `orchestrator.py` | Main CLI tool - runs developer/reviewer loop |
+| `pr_review.py` | **PR-aware review** - fetches GitHub PR context, reviews uncommitted changes |
+| `smart_review.py` | Git diff review - reviews changes without PR context |
+| `review.py` | Quick file/clipboard review |
+| `orchestrator.py` | Full developer/reviewer loop for autonomous coding |
 | `server.py` | FastAPI server for HTTP access |
 | `config/agents.yaml` | Agent personas and system prompts |
-| `docs/cursor-integration.md` | How to use with Cursor IDE |
+
+## Cursor Integration
+
+Projects using this system need:
+1. `scripts/review.sh` - wrapper that calls the Python tools
+2. `.cursor/rules/peer-review.mdc` - Cursor rule with trigger words
+
+Example integration: `/Users/aaldere1/CineConcerts-App-ios26/`
 
 ## Usage Examples
 
