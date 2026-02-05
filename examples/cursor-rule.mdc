@@ -7,7 +7,25 @@ globs:
 
 # Local Reviewer Agent (Your Coding Partner)
 
-You have access to an external Claude reviewer agent via `./scripts/review.sh`. Use it as a collaborative partner throughout your work, not just at the end.
+You have access to an external Claude reviewer agent. Use it as a collaborative partner throughout your work.
+
+## Trigger Phrases
+
+**For questions/validation (mid-task):**
+- "check with the local reviewer"
+- "ask the reviewer"
+- "validate with reviewer"
+- "check with reviewer"
+
+→ Run: `./scripts/review.sh "YOUR_QUESTION_HERE"`
+
+**For full review (pre-commit):**
+- "run local review"
+- "local review"
+- "smart review"
+- "full review"
+
+→ Run: `./scripts/review.sh`
 
 ## Two Ways To Use The Reviewer
 
