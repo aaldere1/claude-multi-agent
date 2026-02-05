@@ -27,17 +27,47 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-REVIEWER_PROMPT = """You are an expert iOS/Swift code reviewer.
+REVIEWER_PROMPT = """You are an expert iOS/Swift code reviewer for a SwiftUI app.
 
 Your role:
 - Review code thoroughly but efficiently
 - Focus on: bugs, memory issues, thread safety, SwiftUI best practices
 - Be specific with line numbers or code references
 
+Review criteria:
+- Memory: Check for retain cycles (especially in closures), proper weak/unowned
+- Threading: UI updates on MainActor, async/await patterns
+- SwiftUI: Proper @State, @Binding, @Observable usage
+- Performance: Unnecessary view rebuilds, lazy loading
+- Error handling: No force unwraps, proper do-catch
+- Code style: Clear naming, small functions, no TODOs
+
 Response format:
 1. Start with **APPROVED** or **CHANGES_REQUESTED**
-2. List specific issues (if any)
-3. Keep it actionable and concise"""
+2. List specific issues (if any) with line references
+3. Keep it actionable and concise
+4. Max 5 issues per review - prioritize the most important"""
+
+
+CINECONCERTS_CONTEXT = """
+This is the CineConcerts iOS app - a film music streaming and events app.
+
+Key patterns in this codebase:
+- Services are singletons with @MainActor isolation
+- State management: @StateObject for view-owned, @EnvironmentObject for shared
+- ImageCacheManager handles all image caching
+- Firebase for auth, Firestore, and push notifications
+- ShopifyService for e-commerce
+- VimeoOTTService for video streaming
+- Skeleton loaders with shimmer for loading states
+- .liquidGlassBackground() modifier for consistent styling
+
+Common issues to watch for:
+- Not using @MainActor for UI state updates
+- Missing error handling in async functions
+- Not checking cache before network requests
+- Force unwrapping optionals
+"""
 
 
 def get_clipboard():
@@ -49,9 +79,14 @@ def get_clipboard():
         return None
 
 
-def review_code(code: str, question: str = None) -> str:
+def review_code(code: str, question: str = None, context: str = "ios") -> str:
     """Send code to reviewer and get feedback."""
     client = anthropic.Anthropic()
+
+    # Build system prompt based on context
+    system = REVIEWER_PROMPT
+    if context == "cc" or context == "cineconcerts":
+        system = REVIEWER_PROMPT + "\n\n" + CINECONCERTS_CONTEXT
 
     prompt = f"Review this code:\n\n```\n{code}\n```"
     if question:
@@ -61,7 +96,7 @@ def review_code(code: str, question: str = None) -> str:
         model=os.getenv("DEFAULT_MODEL", "claude-sonnet-4-20250514"),
         max_tokens=2048,
         temperature=0.2,
-        system=REVIEWER_PROMPT,
+        system=system,
         messages=[{"role": "user", "content": prompt}]
     )
     return response.content[0].text
@@ -72,6 +107,8 @@ def main():
     parser.add_argument("--file", "-f", help="File to review")
     parser.add_argument("--clipboard", "-c", action="store_true", help="Review clipboard content")
     parser.add_argument("--question", "-q", help="Specific question about the code")
+    parser.add_argument("--context", "-x", choices=["ios", "cc", "general"], default="ios",
+                        help="Context type: ios (default), cc (CineConcerts), general")
     parser.add_argument("--copy", action="store_true", help="Copy result to clipboard")
 
     args = parser.parse_args()
@@ -103,7 +140,7 @@ def main():
 
     # Get review
     print("-" * 50)
-    review = review_code(code, args.question)
+    review = review_code(code, args.question, args.context)
     print(review)
     print("-" * 50)
 
