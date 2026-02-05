@@ -30,9 +30,11 @@ from pathlib import Path
 import anthropic
 from dotenv import load_dotenv
 
+from config_loader import load_project_config, build_review_prompt
+
 load_dotenv()
 
-PR_REVIEWER_PROMPT = """You are an expert iOS/Swift code reviewer performing a PR readiness check.
+BASE_PR_REVIEWER_PROMPT = """You are an expert code reviewer performing a PR readiness check.
 
 You have access to:
 1. The PR description (what this PR is supposed to accomplish)
@@ -50,14 +52,7 @@ Review in this order:
 2. **Review Comments Check**: Were previous reviewer comments addressed?
 3. **CI/Build Check**: If there were failures, do these changes fix them?
 4. **New Issues Check**: Do these changes introduce any new problems?
-5. **Code Quality Check**: Standard iOS/Swift best practices
-
-## CineConcerts Codebase Patterns
-- Services are singletons with @MainActor isolation
-- State: @StateObject for view-owned, @EnvironmentObject for shared
-- ImageCacheManager handles all image caching
-- Firebase for auth, Firestore, push notifications
-- .liquidGlassBackground() for consistent styling
+5. **Code Quality Check**: Best practices for the language/framework
 
 ## Response Format
 
@@ -220,10 +215,17 @@ def review_with_pr_context(
     diff: str,
     pr_context: str,
     files_changed: list[str],
-    developer_context: str = None
+    developer_context: str = None,
+    project_config: dict = None
 ) -> str:
     """Send everything to the reviewer."""
     client = anthropic.Anthropic()
+
+    # Build system prompt with project-specific context
+    if project_config:
+        system_prompt = build_review_prompt(project_config, BASE_PR_REVIEWER_PROMPT)
+    else:
+        system_prompt = BASE_PR_REVIEWER_PROMPT
 
     prompt_parts = []
 
@@ -242,7 +244,7 @@ def review_with_pr_context(
         model=os.getenv("DEFAULT_MODEL", "claude-sonnet-4-20250514"),
         max_tokens=3000,
         temperature=0.2,
-        system=PR_REVIEWER_PROMPT,
+        system=system_prompt,
         messages=[{"role": "user", "content": prompt}]
     )
     return response.content[0].text
@@ -293,6 +295,11 @@ def main():
     else:
         print("ℹ️  No PR found for this branch (reviewing without PR context)")
 
+    # Load project config
+    project_config = load_project_config(repo_path)
+    if project_config.get("name") != "Project":
+        print(f"📦 Project: {project_config.get('name')}")
+
     # Get the diff
     diff = get_git_diff(repo_path, args.staged)
 
@@ -312,7 +319,7 @@ def main():
     print("━" * 60 + "\n")
 
     # Get the review
-    review = review_with_pr_context(diff, pr_context, files_changed, developer_context)
+    review = review_with_pr_context(diff, pr_context, files_changed, developer_context, project_config)
     print(review)
 
     print("\n" + "━" * 60)

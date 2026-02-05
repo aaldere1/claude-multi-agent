@@ -1,0 +1,25 @@
+# Project Configuration for Claude Review Agent
+# Copy this file to your project root as .claude-review.yaml
+
+# Project name (displayed in review output)
+name: "My Project"
+
+# Primary language/framework
+# Options: swift, python, typescript, javascript, go, rust, etc.
+language: swift
+
+# Project-specific patterns and conventions
+# The reviewer will be aware of these when reviewing your code
+patterns:
+  - "Services use singleton pattern with shared instance"
+  - "Use async/await for all network calls"
+  - "Error handling uses Result type"
+  - "Views follow MVVM architecture"
+
+# Areas to focus on during review (optional - defaults based on language)
+# Uncomment and customize if you want specific focus areas
+# review_focus:
+#   - "Memory management (retain cycles, weak references)"
+#   - "Thread safety and MainActor usage"
+#   - "Error handling completeness"
+#   - "API design and naming conventions"

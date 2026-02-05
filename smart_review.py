@@ -30,9 +30,11 @@ from pathlib import Path
 import anthropic
 from dotenv import load_dotenv
 
+from config_loader import load_project_config, build_review_prompt
+
 load_dotenv()
 
-SMART_REVIEWER_PROMPT = """You are an expert iOS/Swift code reviewer for the CineConcerts app.
+BASE_SMART_REVIEWER_PROMPT = """You are an expert code reviewer.
 
 You are reviewing a git diff (the actual changes made, not entire files).
 
@@ -40,24 +42,7 @@ You are reviewing a git diff (the actual changes made, not entire files).
 1. Understand what the developer was trying to accomplish (from the context provided)
 2. Review ONLY the changes shown in the diff
 3. Evaluate if the changes correctly implement the intended functionality
-4. Check for iOS/Swift best practices issues
-
-## CineConcerts Codebase Patterns
-- Services are singletons with @MainActor isolation
-- State: @StateObject for view-owned, @EnvironmentObject for shared
-- ImageCacheManager handles all image caching
-- Firebase for auth, Firestore, push notifications
-- ShopifyService for e-commerce
-- VimeoOTTService for video streaming
-- .liquidGlassBackground() for consistent styling
-
-## Review Criteria
-- Does this change accomplish the stated goal?
-- Memory: retain cycles, weak/unowned in closures
-- Threading: MainActor for UI, async/await patterns
-- SwiftUI: proper state management
-- Error handling: no force unwraps
-- Performance: unnecessary rebuilds
+4. Check for best practices issues
 
 ## Response Format
 Start with:
@@ -101,9 +86,15 @@ def get_staged_files(repo_path: str) -> list[str]:
     return [f for f in files if f]
 
 
-def review_diff(diff: str, context: str = None, files_changed: list[str] = None) -> str:
+def review_diff(diff: str, context: str = None, files_changed: list[str] = None, project_config: dict = None) -> str:
     """Send diff to reviewer with context."""
     client = anthropic.Anthropic()
+
+    # Build system prompt with project-specific context
+    if project_config:
+        system_prompt = build_review_prompt(project_config, BASE_SMART_REVIEWER_PROMPT)
+    else:
+        system_prompt = BASE_SMART_REVIEWER_PROMPT
 
     # Build the prompt
     prompt_parts = []
@@ -122,7 +113,7 @@ def review_diff(diff: str, context: str = None, files_changed: list[str] = None)
         model=os.getenv("DEFAULT_MODEL", "claude-sonnet-4-20250514"),
         max_tokens=2048,
         temperature=0.2,
-        system=SMART_REVIEWER_PROMPT,
+        system=system_prompt,
         messages=[{"role": "user", "content": prompt}]
     )
     return response.content[0].text
@@ -156,6 +147,11 @@ def main():
         print("\nTip: Make sure you have uncommitted changes, or use --staged for staged changes.")
         sys.exit(0)
 
+    # Load project config
+    project_config = load_project_config(repo_path)
+    if project_config.get("name") != "Project":
+        print(f"📦 Project: {project_config.get('name')}")
+
     # Get list of changed files for context
     if args.staged:
         files_changed = get_staged_files(repo_path)
@@ -168,7 +164,7 @@ def main():
     print("━" * 50)
 
     # Get review
-    review = review_diff(diff, context, files_changed)
+    review = review_diff(diff, context, files_changed, project_config)
     print(review)
     print("━" * 50)
 

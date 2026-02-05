@@ -1,455 +1,235 @@
-# Claude Multi-Agent Orchestrator
+# Claude Review Agent
 
-Autonomous multi-agent system where Claude instances collaborate to develop, review, and refine code before any human intervention or commits.
+An AI-powered code review tool that integrates with Cursor IDE. Get instant, context-aware code reviews before you commit.
 
-## Primary Use Case: Cursor IDE Integration
-
-The main workflow is **PR-aware code review** integrated with Cursor IDE:
+## What It Does
 
 ```
-You code in Cursor → Say "smart review" → External Claude agent reviews your changes
-                                         → Checks PR context from GitHub
-                                         → Verifies previous feedback addressed
-                                         → Returns READY TO COMMIT or NEEDS WORK
+You code in Cursor → Say "local review" → External Claude agent reviews your changes
+                                         ↓
+                              • Fetches PR context from GitHub
+                              • Checks if previous feedback was addressed
+                              • Reviews your uncommitted changes
+                              • Returns READY TO COMMIT or NEEDS WORK
 ```
 
-### Quick Start for Cursor
-
-1. Add the review script to your project (example: CineConcerts iOS app):
-   ```bash
-   cp scripts/review.sh /path/to/your/project/scripts/
-   chmod +x /path/to/your/project/scripts/review.sh
-   ```
-
-2. Add a Cursor rule (`.cursor/rules/peer-review.mdc`) - see `examples/cursor-rule.mdc`
-
-3. In Cursor chat, say: `smart review` or `local review`
-
-4. Cursor runs the external reviewer and shows you the verdict.
+**Key Features:**
+- 🔍 **PR-Aware Reviews** - Knows your PR description, previous comments, CI status
+- 🤖 **Cursor Integration** - Just say "local review" or "ask the reviewer"
+- ⚙️ **Project-Specific** - Learns your codebase patterns from a simple config file
+- 🔄 **Mid-Task Validation** - Ask questions while coding, not just at the end
 
 ---
 
-## Concept
+## Quick Start
 
-Instead of a single AI assistant, this system uses multiple Claude "agents" with different roles that communicate with each other:
-
-```
-┌─────────────────┐         ┌─────────────────┐
-│ Developer Agent │ ◄─────► │ Reviewer Agent  │
-│                 │         │                 │
-│ • Writes code   │         │ • Reviews code  │
-│ • Fixes issues  │         │ • Finds bugs    │
-│ • Implements    │         │ • Suggests      │
-│   features      │         │   improvements  │
-└─────────────────┘         └─────────────────┘
-         │                           │
-         └───────────┬───────────────┘
-                     ▼
-          ┌─────────────────────┐
-          │    Orchestrator     │
-          │                     │
-          │ • Manages loop      │
-          │ • Tracks iterations │
-          │ • Decides when done │
-          └─────────────────────┘
-```
-
-## Architecture Options
-
-### Option 1: Local Only (Recommended Start)
-
-Everything runs on your Mac. Simplest setup.
-
-```
-Your Mac
-├── Cursor/VS Code
-│   └── Custom command triggers orchestrator
-├── Orchestrator (Python script)
-│   ├── Developer Agent (Claude API call)
-│   └── Reviewer Agent (Claude API call)
-└── Your codebase
-```
-
-**Pros:** Simple, no network complexity, fast
-**Cons:** Uses your machine's resources
-
-### Option 2: Local + Background Service
-
-A persistent local API server that Cursor can call.
-
-```
-Your Mac
-├── Cursor/VS Code
-│   └── HTTP call to localhost:8000
-├── FastAPI Server (always running)
-│   └── Orchestrator endpoints
-└── Your codebase
-```
-
-**Pros:** Async operations, persistent state, can run long tasks
-**Cons:** Need to keep server running
-
-### Option 3: Distributed (Local + Cloud)
-
-Offload review/analysis to a cloud server.
-
-```
-Your Mac                          DigitalOcean Droplet
-├── Cursor/VS Code                ├── Reviewer Agent
-│   └── Triggers local agent      ├── Architecture Agent
-├── Developer Agent               └── Testing Agent
-│   └── Sends code for review ────────►
-│   ◄──────── Receives feedback
-└── Your codebase
-```
-
-**Pros:** Parallel processing, offload compute
-**Cons:** Network latency, more complex setup
-
-## Quick Start (Local Only)
-
-### Prerequisites
-
-- Python 3.10+
-- Anthropic API key
-- Cursor or VS Code
-
-### Installation
+### 1. Install the Tool
 
 ```bash
-# Clone this repo
-git clone https://github.com/aaldere1/claude-multi-agent.git
-cd claude-multi-agent
+# Clone the repository
+git clone https://github.com/YOUR_USERNAME/claude-review-agent.git ~/claude-review-agent
+cd ~/claude-review-agent
 
 # Create virtual environment
-python -m venv venv
-source venv/bin/activate  # or `venv\Scripts\activate` on Windows
+python3 -m venv venv
+source venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
 
 # Set up environment
 cp .env.example .env
-# Edit .env with your ANTHROPIC_API_KEY
 ```
 
-### Basic Usage
+Edit `.env` and add your Anthropic API key:
+```bash
+ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
+```
+
+### 2. Set Environment Variable
+
+Add to your `~/.zshrc` or `~/.bashrc`:
+```bash
+export CLAUDE_REVIEW_HOME=~/claude-review-agent
+```
+
+Then reload: `source ~/.zshrc`
+
+### 3. Set Up Your Project
 
 ```bash
-# Run a simple developer-reviewer loop
-python orchestrator.py --task "Add a logout button to the Settings screen"
+cd ~/your-project
 
-# With specific file context
-python orchestrator.py --task "Fix the memory leak" --files src/MyClass.swift
+# Copy the review script
+mkdir -p scripts
+cp ~/claude-review-agent/examples/review.sh scripts/
+chmod +x scripts/review.sh
 
-# With max iterations
-python orchestrator.py --task "Implement dark mode" --max-iterations 3
+# Copy the Cursor rule
+mkdir -p .cursor/rules
+cp ~/claude-review-agent/examples/cursor-rule.mdc .cursor/rules/peer-review.mdc
+
+# (Optional) Add project-specific config
+cp ~/claude-review-agent/examples/claude-review.yaml .claude-review.yaml
+# Edit .claude-review.yaml with your project's patterns
 ```
 
-### Cursor Integration
+### 4. Use in Cursor
 
-1. Create a custom command in Cursor (`.cursor/commands/review-loop.md`):
+In Cursor chat, say:
+- `"local review"` - Full PR-aware review before committing
+- `"ask the reviewer: is this approach correct?"` - Get guidance mid-task
 
-```markdown
----
-name: review-loop
-description: Run autonomous developer-reviewer loop
 ---
 
-Run the multi-agent review loop for this task:
-{selection}
+## Project Configuration
 
-Execute: `python /path/to/claude-multi-agent/orchestrator.py --task "{selection}"`
+Create `.claude-review.yaml` in your project root to customize reviews:
+
+```yaml
+# Project name
+name: "My iOS App"
+
+# Language (swift, python, typescript, javascript, go, rust, etc.)
+language: swift
+
+# Your codebase patterns - the reviewer will be aware of these
+patterns:
+  - "Services are singletons with @MainActor isolation"
+  - "Use ImageCacheManager for all image caching"
+  - "Views follow MVVM architecture"
+  - "Use .backgroundStyle() modifier for consistent styling"
 ```
 
-2. Use in Cursor: Type `/review-loop` and describe your task
+If no config exists, the tool uses sensible defaults based on the language.
+
+---
+
+## Cursor Integration
+
+The Cursor rule (`.cursor/rules/peer-review.mdc`) teaches Cursor how to use the reviewer.
+
+**Trigger phrases:**
+
+| Say this... | What happens |
+|-------------|--------------|
+| `"local review"` | Full PR-aware review |
+| `"smart review"` | Full PR-aware review |
+| `"check with the reviewer"` | Ask a question with your current changes |
+| `"ask the reviewer: ..."` | Ask a specific question |
+| `"validate with reviewer"` | Validate your approach |
+
+**Example workflow:**
+
+> You: "Fix the memory leak in ProfileView. Check with the reviewer if you're unsure about the approach. Run local review before committing."
+>
+> Cursor: Makes changes, asks reviewer about weak self usage, gets confirmation, finishes all changes, runs full review, gets READY TO COMMIT, offers to commit.
+
+---
+
+## Command Line Usage
+
+You can also use the tools directly:
+
+```bash
+# Activate the environment
+cd ~/claude-review-agent
+source venv/bin/activate
+
+# PR-aware review (recommended)
+python pr_review.py --repo ~/your-project
+
+# PR-aware review with context
+python pr_review.py --repo ~/your-project --context "Fixed the retain cycle"
+
+# Simple review (no PR context, faster)
+python smart_review.py --repo ~/your-project
+
+# Review a single file
+python review.py --file ~/your-project/src/MyClass.swift
+
+# Review clipboard content
+python review.py --clipboard
+```
+
+---
 
 ## How It Works
 
-### The Loop
+### PR-Aware Review (`pr_review.py`)
 
-```
-1. YOU: Describe task
-          │
-          ▼
-2. DEVELOPER AGENT: Writes initial implementation
-          │
-          ▼
-3. REVIEWER AGENT: Analyzes code, returns verdict
-          │
-          ├── APPROVED → Commit & Done
-          │
-          └── CHANGES_REQUESTED → Feedback
-                    │
-                    ▼
-4. DEVELOPER AGENT: Addresses feedback, iterates
-          │
-          └── Back to step 3
+1. Detects your current branch
+2. Fetches from GitHub:
+   - PR description
+   - Review comments
+   - CI/build status
+3. Gets your uncommitted changes (`git diff`)
+4. Sends everything to Claude with your project config
+5. Returns verdict: **READY TO COMMIT** or **NEEDS WORK**
 
-5. After N iterations or approval → Present to human
-```
+### Simple Review (`smart_review.py`)
 
-### Agent Personas
+Same as above but skips the GitHub PR context. Faster for quick checks.
 
-**Developer Agent**
-- System prompt optimized for writing clean, functional code
-- Receives task + any previous feedback
-- Outputs code changes with explanations
+### File Review (`review.py`)
 
-**Reviewer Agent**
-- System prompt optimized for critical code review
-- Receives code diff/changes
-- Outputs: APPROVED or CHANGES_REQUESTED with specific feedback
+Reviews a single file or clipboard content. Good for reviewing code snippets.
 
-**Optional: Architect Agent**
-- Consulted for larger changes
-- Provides high-level design guidance
-- Helps with patterns and structure
+---
 
-**Optional: Testing Agent**
-- Generates test cases
-- Identifies edge cases
-- Validates implementation completeness
+## Setting Up on Another Computer
 
-## Configuration
-
-### Environment Variables
-
-```bash
-# .env
-ANTHROPIC_API_KEY=sk-ant-...
-DEFAULT_MODEL=claude-sonnet-4-20250514
-MAX_ITERATIONS=5
-LOG_LEVEL=INFO
-```
-
-### Agent Configuration
-
-Edit `config/agents.yaml`:
-
-```yaml
-developer:
-  model: claude-sonnet-4-20250514
-  temperature: 0.3
-  system_prompt: |
-    You are a senior software developer. Write clean, well-documented code.
-    Follow best practices for the language/framework in use.
-
-reviewer:
-  model: claude-sonnet-4-20250514
-  temperature: 0.2
-  system_prompt: |
-    You are a strict but constructive code reviewer.
-    Look for: bugs, security issues, performance problems, code smells.
-    Return APPROVED if code is production-ready.
-    Return CHANGES_REQUESTED with specific, actionable feedback if not.
-```
-
-## iOS Development Use Case
-
-For Swift/SwiftUI development with Xcode:
-
-```bash
-# Review a SwiftUI view
-python orchestrator.py \
-  --task "Add pull-to-refresh to the playlist view" \
-  --files "MyApp/Views/PlaylistView.swift" \
-  --context-type ios
-
-# The orchestrator will:
-# 1. Developer agent writes SwiftUI code
-# 2. Reviewer agent checks for iOS best practices
-# 3. Loop until approved
-# 4. Output final code for you to paste into Xcode
-```
-
-### iOS-Specific Agents
-
-```yaml
-ios_reviewer:
-  system_prompt: |
-    You are an iOS code reviewer specializing in Swift and SwiftUI.
-    Check for:
-    - Memory management (retain cycles, weak references)
-    - Main thread violations
-    - SwiftUI state management (@State, @Binding, @ObservedObject)
-    - Accessibility compliance
-    - iOS Human Interface Guidelines
-```
-
-## Communication Patterns
-
-### Pattern 1: File-Based (Simple)
-
-Agents communicate through files:
-
-```
-workspace/
-├── task.md           # Current task description
-├── code_changes.diff # Developer's output
-├── review.md         # Reviewer's feedback
-└── conversation.log  # Full history
-```
-
-### Pattern 2: In-Memory (Faster)
-
-Agents communicate through Python objects - all in one process.
-
-### Pattern 3: API-Based (Distributed)
-
-For cloud deployment:
-
-```
-POST /api/develop
-  → Developer agent processes task
-  → Returns code changes
-
-POST /api/review
-  → Reviewer agent analyzes changes
-  → Returns verdict + feedback
-
-POST /api/orchestrate
-  → Runs full loop autonomously
-  → Returns final result
-```
-
-## Extending to Cloud (Optional)
-
-If you want to run agents on a DigitalOcean droplet:
-
-### Droplet Setup
-
-```bash
-# On droplet
-sudo apt update && sudo apt install -y python3-pip python3-venv
-git clone https://github.com/aaldere1/claude-multi-agent.git
-cd claude-multi-agent
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-
-# Run as API server
-python server.py --host 0.0.0.0 --port 8080
-```
-
-### Local → Droplet Communication
-
-```python
-# On your Mac, call the droplet
-import requests
-
-response = requests.post(
-    "http://your-droplet-ip:8080/api/review",
-    json={"code": code_diff, "context": "ios"}
-)
-feedback = response.json()["feedback"]
-```
-
-## Review Tools
-
-### pr_review.py - PR-Aware Smart Review (Recommended)
-
-Reviews your uncommitted changes with full GitHub PR context:
-
-```bash
-# Activate venv first
-source venv/bin/activate
-
-# Review with PR context
-python pr_review.py --repo /path/to/repo
-
-# With context about what you did
-python pr_review.py --repo /path/to/repo --context "Fixed the memory leak"
-```
-
-**What it does:**
-1. Detects current branch
-2. Fetches PR description, review comments, CI status from GitHub
-3. Gets your uncommitted changes (git diff)
-4. Reviews changes against all that context
-5. Reports: READY TO COMMIT or NEEDS WORK
-
-### smart_review.py - Git Diff Review
-
-Reviews git diff without PR context (faster, simpler):
-
-```bash
-python smart_review.py --repo /path/to/repo
-python smart_review.py --repo /path/to/repo --context "Added error handling"
-python smart_review.py --repo /path/to/repo --files specific/file.swift
-```
-
-### review.py - Quick File/Clipboard Review
-
-Review a single file or clipboard content:
-
-```bash
-python review.py --file path/to/file.swift
-python review.py --clipboard
-python review.py --file path/to/file.swift --context cc  # CineConcerts context
-```
-
-## Cursor IDE Integration
-
-### Setting Up Your Project
-
-1. **Create the review script** in your project:
-
+1. **Clone the tool:**
    ```bash
-   # /your-project/scripts/review.sh
-   #!/bin/bash
-   cd ~/claude-multi-agent
+   git clone https://github.com/YOUR_USERNAME/claude-review-agent.git ~/claude-review-agent
+   cd ~/claude-review-agent
+   python3 -m venv venv
    source venv/bin/activate
-
-   REPO="/path/to/your/project"
-
-   if [ "$1" == "--simple" ]; then
-       shift
-       python smart_review.py --repo "$REPO" --context "$1"
-   elif [ -n "$1" ]; then
-       python pr_review.py --repo "$REPO" --context "$1"
-   else
-       python pr_review.py --repo "$REPO"
-   fi
+   pip install -r requirements.txt
+   cp .env.example .env
+   # Add your API key to .env
    ```
 
-2. **Create Cursor rule** at `.cursor/rules/peer-review.mdc`:
-
-   ```markdown
-   ---
-   description: LOCAL code review using external Claude reviewer agent
-   alwaysApply: true
-   ---
-
-   When user says: /review, smart review, local review
-
-   Run this command:
-   ./scripts/review.sh
-
-   Show the output and summarize the verdict.
+2. **Set environment variable:**
+   ```bash
+   echo 'export CLAUDE_REVIEW_HOME=~/claude-review-agent' >> ~/.zshrc
+   source ~/.zshrc
    ```
 
-3. **Use trigger words** in Cursor chat:
-   - `smart review`
-   - `local review`
-   - `/review`
+3. **For each project:**
+   ```bash
+   cd ~/your-project
+   cp ~/claude-review-agent/examples/review.sh scripts/
+   chmod +x scripts/review.sh
+   cp ~/claude-review-agent/examples/cursor-rule.mdc .cursor/rules/peer-review.mdc
+   # Optionally add .claude-review.yaml
+   ```
 
-## Roadmap
+---
 
-- [x] Basic orchestrator with developer + reviewer
-- [x] Cursor command integration
-- [x] iOS-specific agent personas
-- [x] File-based context loading
-- [x] API server mode
-- [x] PR-aware review with GitHub integration
-- [x] Git diff-based review (smart_review.py)
-- [x] Quick file/clipboard review (review.py)
-- [ ] Droplet deployment scripts
-- [ ] Web UI for monitoring loops
-- [ ] Slack/Discord notifications
+## Requirements
 
-## Related
+- Python 3.10+
+- Anthropic API key
+- GitHub CLI (`gh`) for PR-aware features
+- Cursor IDE (for IDE integration)
 
-- [Claude API Documentation](https://docs.anthropic.com)
-- [Cursor Custom Commands](https://cursor.sh/docs)
-- [Anthropic Claude Agent SDK](https://github.com/anthropics/anthropic-sdk-python)
+---
+
+## Files
+
+| File | Purpose |
+|------|---------|
+| `pr_review.py` | PR-aware review with GitHub context |
+| `smart_review.py` | Git diff review without PR context |
+| `review.py` | Single file/clipboard review |
+| `config_loader.py` | Loads project-specific configuration |
+| `examples/review.sh` | Template script for projects |
+| `examples/cursor-rule.mdc` | Template Cursor rule |
+| `examples/claude-review.yaml` | Template project config |
+
+---
+
+## License
+
+MIT
